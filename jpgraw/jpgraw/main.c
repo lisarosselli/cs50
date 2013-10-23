@@ -44,12 +44,6 @@ int main(void)
     // attempt to open the file for reading
     file = fopen("card.raw", "r");
     
-    // setting up some bools for first 4 bytes comparison
-    bool firstByte = false;
-    bool secondByte = false;
-    bool thirdByte = false;
-    bool fourhByte = false;
-    
     if (file == NULL)
     {
         printf("Could not open file.\n");
@@ -101,13 +95,10 @@ int main(void)
         FourByteBlock b;
         fread(&b, 1, sizeof(FourByteBlock), file);
         
-        
-        // loop through the bytes and search by 4-byte blocks
-        // that might match the jpg signature(s) prev. defined
-        if (b.byte1 == sig1.byte1 &&
-            b.byte2 == sig1.byte2 &&
-            b.byte3 == sig1.byte3 &&
-            (b.byte4 == sig1.byte4 || b.byte4 == sig2.byte4)) {
+        // loop through the bytes and search initial 4-byte blocks
+        // that might match the jpg signature(s)
+        if (jpgSignatureMatch(b))
+        {
             printf("\t\t-> Found beginning of a jpg!\n");
             
             jpgSequenceNum++;
@@ -116,6 +107,9 @@ int main(void)
             printf("\t\t-> New filename = %s\n", newFilename);
             
             jpgFilePtr = fopen(newFilename, "w");
+            
+            // free up what was essentially malloc'd
+            free(newFilename);
             
             if (jpgFilePtr == NULL)
             {
@@ -154,6 +148,7 @@ int main(void)
         }
     }
     
+    fclose(file);
     free(buffer);
     
     return 0;
@@ -161,15 +156,25 @@ int main(void)
 
 char* getJpgFilename(int jpgNum)
 {
-    string blah = malloc(sizeof(char) * 7);
+    string jpgFilename = malloc(sizeof(char) * 7);
     
-    //TODO better format the name
+    string zeros;
     
+    // add preceding zeros as string, if needed
+    if (jpgNum <= 9)
+    {
+        zeros = "00";
+    } else if (jpgNum >= 10 && jpgNum <= 99)
+    {
+        zeros = "0";
+    } else
+    {
+        zeros = "";
+    }
     
-    sprintf(blah, "%i.jpg", jpgNum);
+    sprintf(jpgFilename, "%s%i.jpg", zeros, jpgNum);
     
-    
-    return blah;
+    return jpgFilename;
 }
 
 // compare incoming block against first 4 jpg hex values
