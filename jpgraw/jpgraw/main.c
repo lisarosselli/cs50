@@ -38,6 +38,7 @@ int main(void)
     FILE *file;
     long lSize;
     BYTE* buffer;
+    BYTE* smallBuffer;
     size_t readResult;
     size_t writeResult;
     
@@ -56,21 +57,6 @@ int main(void)
     rewind(file);
     
     printf("file size is %ld\n", lSize);
-    
-    // defining one of the four-byte signatures i'm looking for
-    FourByteBlock sig1;
-    sig1.byte1 = 0xff;
-    sig1.byte2 = 0xd8;
-    sig1.byte3 = 0xff;
-    sig1.byte4 = 0xe0;
-    
-    // defining the other four-byte signature i'm looking for
-    FourByteBlock sig2;
-    sig2.byte1 = 0xff;
-    sig2.byte2 = 0xd8;
-    sig2.byte3 = 0xff;
-    sig2.byte4 = 0xe1;
-    
     
     // allocate memory to contain 512 Bytes (a block)
     buffer = (BYTE*) malloc (sizeof(BYTE) * 512);
@@ -109,7 +95,7 @@ int main(void)
             jpgFilePtr = fopen(newFilename, "w");
             
             // free up what was essentially malloc'd
-            free(newFilename);
+            
             
             if (jpgFilePtr == NULL)
             {
@@ -122,34 +108,46 @@ int main(void)
             
             bool isMatch;
             
+            smallBuffer = (BYTE*) malloc(sizeof(BYTE) * 4);
+            
+            
             do {
-                readResult = fread(buffer, 1, 512, file);
+                //readResult = fread(buffer, 1, 512, file);
+                readResult = fread(smallBuffer, 1, 4, file);
                 
                 // pull the first 4 bytes of the 512 block
-                b.byte1 = buffer[0];
-                b.byte2 = buffer[1];
-                b.byte3 = buffer[2];
-                b.byte4 = buffer[3];
+                b.byte1 = smallBuffer[0];//buffer[0];
+                b.byte2 = smallBuffer[1];//buffer[1];
+                b.byte3 = smallBuffer[2];//buffer[2];
+                b.byte4 = smallBuffer[3];//buffer[3];
+                
+                //printf("four bytes %x %x %x %x\n", b.byte1, b.byte2, b.byte3, b.byte4);
                 
                 // test if they are the jpg signature
+                //isMatch = jpgSignatureMatch(b);
+                
                 isMatch = jpgSignatureMatch(b);
                 
                 if (!isMatch)
                 {
                     // if no jpg sig, continue to write the 512 bytes to file
-                    writeResult = fwrite(buffer, 1, 512, jpgFilePtr);
-                    printf("writing 512 bytes...\n");
+                    //writeResult = fwrite(buffer, 1, 512, jpgFilePtr);
+                    //printf("writing 512 bytes...\n");
+                    writeResult = fwrite(smallBuffer, 1, 4, jpgFilePtr);
+                    
                 }
 
-            } while (b.byte1 != sig1.byte1 && b.byte2 != sig1.byte2 && b.byte3 != sig1.byte3 && (b.byte4 != sig1.byte4 || b.byte4 != sig2.byte4));
+            } while (!jpgSignatureMatch(b));
             
             printf("\t\t-> Closed %s file.\n", newFilename);
             fclose(jpgFilePtr);
+            free(newFilename);
         }
     }
     
     fclose(file);
     free(buffer);
+    free(smallBuffer);
     
     return 0;
 }
@@ -180,23 +178,21 @@ char* getJpgFilename(int jpgNum)
 // compare incoming block against first 4 jpg hex values
 bool jpgSignatureMatch(FourByteBlock block)
 {
-    bool isMatch1 = false;
-    bool isMatch2 = false;
-    bool isMatch3 = false;
-    bool isMatch4 = false;
-    bool fullMatch = false;
+    bool match = false;
     
-    isMatch1 = (block.byte1 == 0xff) ? true : false;
-    isMatch2 = (block.byte2 == 0xd8) ? true : false;
-    isMatch3 = (block.byte3 == 0xff) ? true : false;
-    isMatch4 = (block.byte4 == 0xe0) ? true : false;
+    FourByteBlock sig;
+    sig.byte1 = 0xff;
+    sig.byte2 = 0xd8;
+    sig.byte3 = 0xff;
+    sig.byte4 = 0xe0;
     
-    if (!isMatch4)
+    if (block.byte1 == sig.byte1 && block.byte2 == sig.byte2 && block.byte3 == sig.byte3)
     {
-        isMatch4 = (block.byte4 == 0xe1) ? true : false;
+        if (block.byte4 == sig.byte4 || block.byte4 == 0xe1)
+        {
+            match = true;
+        }
     }
     
-    fullMatch = (isMatch1 && isMatch2 && isMatch3 && isMatch4);
-    
-    return fullMatch;
+    return match;
 }
