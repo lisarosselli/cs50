@@ -74,12 +74,16 @@ int main(void)
     
     int jpgSequenceNum = 0;
     
+    long bytesRead = 0;
+    
     // setup a pointer that will point to the jpg file
     FILE* jpgFilePtr;
     
     while (!feof(file)) {
         FourByteBlock b;
         fread(&b, 1, sizeof(FourByteBlock), file);
+        
+        bytesRead += 4;
         
         // loop through the bytes and search initial 4-byte blocks
         // that might match the jpg signature(s)
@@ -88,6 +92,15 @@ int main(void)
             printf("\t\t-> Found beginning of a jpg!\n");
             
             jpgSequenceNum++;
+            
+            
+            // TODO: remove this
+            if (jpgSequenceNum == 25)
+            {
+                printf("canot get anything beyond dizzz\n");
+            }
+            
+            
             
             char* newFilename = getJpgFilename(jpgSequenceNum);
             printf("\t\t-> New filename = %s\n", newFilename);
@@ -115,6 +128,8 @@ int main(void)
                 //readResult = fread(buffer, 1, 512, file);
                 readResult = fread(smallBuffer, 1, 4, file);
                 
+                bytesRead += 4;
+                
                 // pull the first 4 bytes of the 512 block
                 b.byte1 = smallBuffer[0];//buffer[0];
                 b.byte2 = smallBuffer[1];//buffer[1];
@@ -123,16 +138,10 @@ int main(void)
                 
                 //printf("four bytes %x %x %x %x\n", b.byte1, b.byte2, b.byte3, b.byte4);
                 
-                // test if they are the jpg signature
-                //isMatch = jpgSignatureMatch(b);
-                
                 isMatch = jpgSignatureMatch(b);
                 
                 if (!isMatch)
                 {
-                    // if no jpg sig, continue to write the 512 bytes to file
-                    //writeResult = fwrite(buffer, 1, 512, jpgFilePtr);
-                    //printf("writing 512 bytes...\n");
                     writeResult = fwrite(smallBuffer, 1, 4, jpgFilePtr);
                     
                 }
@@ -148,6 +157,9 @@ int main(void)
     fclose(file);
     free(buffer);
     free(smallBuffer);
+    
+    printf("file bytes = %ld\n", lSize);
+    printf("read bytes = %ld\n", bytesRead);
     
     return 0;
 }
