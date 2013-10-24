@@ -35,7 +35,7 @@ bmpObject outObject;
 
 bool inputIsAcceptible(double d);
 int initOrigBmpObject(char* incomingFile);
-void readWriteHeaders(bmpObject readObject, bmpObject writeObject);
+int initDestBmpObject(char* filename, double userScaleValue);
 
 
 int main(int argc, char* argv[])
@@ -56,13 +56,15 @@ int main(int argc, char* argv[])
     }
     
     // init the originating bmp file object
-    int result = initOrigBmpObject(argv[2]);
-    if (result != 0)
+    int readResult = initOrigBmpObject(argv[2]);
+    if (readResult != 0)
     {
         return 3; // Maybe do something nicer here?
     }
     
-    printf("check inObject for values\n");
+    int writeResult = initDestBmpObject(argv[3], userFloat);
+    
+    printf("check objects for values\n");
 
     
     
@@ -87,10 +89,9 @@ bool inputIsAcceptible(double d)
     return isAcceptible;
 }
 
+// initialize the incoming file's bmpObject
 int initOrigBmpObject(char* incomingFile)
 {
-    printf("initOrigBmpObject\n");
-    
     FILE* inFile = fopen(incomingFile, "r");
     if (inFile == NULL)
     {
@@ -102,21 +103,73 @@ int initOrigBmpObject(char* incomingFile)
     }
     
     BITMAPFILEHEADER inBFH;
-    fread(&inBFH, 1, sizeof(BITMAPFILEHEADER), inFile);
-    inObject.bmpFileHeader = inBFH;
-    
     BITMAPINFOHEADER inBIH;
+    
+    fread(&inBFH, 1, sizeof(BITMAPFILEHEADER), inFile);
     fread(&inBIH, 1, sizeof(BITMAPINFOHEADER), inFile);
+    
+    // ensure the incoming file is a 24-bit BMP 4.0
+    if (inBFH.bfType != 0x4d42 || inBFH.bfOffBits != 54 || inBIH.biSize != 40 || inBIH.biBitCount != 24 || inBIH.biCompression != 0)
+    {
+        printf("Unsupported file format.\n");
+        return 4;
+    }
+    
+    inObject.bmpFileHeader = inBFH;
     inObject.bmpInfoHeader = inBIH;
     
     inObject.filename = incomingFile;
     inObject.scaleBy = 0.0;
     inObject.scaleFactor = -1;
     
+    fclose(inFile);
+    
     return 0;
 }
 
-void readWriteHeaders(bmpObject readObject, bmpObject writeObject)
-{
+int initDestBmpObject(char* filename, double userScaleValue)
+{    
+    outObject.filename = filename;
     
+    FILE* writeFile = fopen(outObject.filename, "w");
+    
+    if (writeFile == NULL)
+    {
+        printf("Could not create/open file %s\n", outObject.filename);
+        return 5;
+    }
+    
+    // initially set the headers equal, will do math in a second
+    outObject.bmpFileHeader = inObject.bmpFileHeader;
+    outObject.bmpInfoHeader = inObject.bmpInfoHeader;
+    
+    long estimatedWidth = outObject.bmpInfoHeader.biWidth * round(userScaleValue);
+    long estimatedHeight = outObject.bmpInfoHeader.biHeight * round(userScaleValue);
+    
+    // calculate new width/height
+    outObject.bmpInfoHeader.biWidth = (LONG) estimatedWidth;
+    outObject.bmpInfoHeader.biHeight = (LONG) estimatedHeight;
+    
+    // determine file size
+    int rawBmpSize = outObject.bmpInfoHeader.biWidth * abs(outObject.bmpInfoHeader.biHeight) * sizeof(RGBTRIPLE);
+    outObject.bmpInfoHeader.biSizeImage = rawBmpSize;
+    outObject.bmpFileHeader.bfSize = rawBmpSize + outObject.bmpFileHeader.bfOffBits;
+    
+    // determine scale values
+    int proposedScaleFactor = outObject.bmpInfoHeader.biWidth % inObject.bmpInfoHeader.biWidth;
+    outObject.scaleFactor = (proposedScaleFactor == 0) ? round(userScaleValue) : proposedScaleFactor;
+    outObject.scaleBy = userScaleValue;
+    
+    // write header and info to the new file
+    BITMAPFILEHEADER bf;
+    bf = outObject.bmpFileHeader;
+    fwrite(&bf, 1, sizeof(BITMAPFILEHEADER), writeFile);
+    
+    BITMAPINFOHEADER bi;
+    bi = outObject.bmpInfoHeader;
+    fwrite(&bi, 1, sizeof(BITMAPINFOHEADER), writeFile);
+    
+    fclose(writeFile);
+    
+    return 0;
 }

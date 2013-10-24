@@ -59,11 +59,11 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "1.5"
+            argument = "3.3"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "smiley.bmp"
+            argument = "small.bmp"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
