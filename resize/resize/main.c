@@ -1,5 +1,7 @@
 /**
- * copy.c
+ * resize.c
+ * L.Rosselli
+ * lisarosselli@g.harvard.edu
  *
  * Computer Science 50
  * Problem Set 5
@@ -10,169 +12,111 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-
+#include <ctype.h>
+#include "cs50.h" //TODO fix to <cs50.h>
 #include "bmp.h"
+
+
+#define BASE 100
+
+
+typedef struct
+{
+    BITMAPFILEHEADER bmpFileHeader;
+    BITMAPINFOHEADER bmpInfoHeader;
+    char* filename;
+    double scaleBy;
+    int scaleFactor;
+} bmpObject;
+
+
+bmpObject inObject;
+bmpObject outObject;
+
+bool inputIsAcceptible(double d);
+int initOrigBmpObject(char* incomingFile);
+void readWriteHeaders(bmpObject readObject, bmpObject writeObject);
+
 
 int main(int argc, char* argv[])
 {
-    // ensure proper usage
+    // do we have the correct number of arguments
     if (argc != 4)
     {
-        printf("Usage: resize f infile outfile\n");
+        printf("Usage: scale by a float, original BMP, destination BMP\n");
         return 1;
     }
     
-    // remember filenames
-    char* infile = argv[2];
-    char* outfile = argv[3];
-    
-    // remember sizing attempt
-    float factor = strtof(argv[1], '\0');
-    
-    if (factor >= 1.0 && factor <= 100.0)
+    // is the float number entered acceptible
+    double userFloat = atof(argv[1]);
+    if (!inputIsAcceptible(userFloat))
     {
-        // good
-    } else
-    {
-        printf("Cannot resize to %.4f\n", factor);
-        return 4;
-    }
-    
-    // open input file
-    FILE* inptr = fopen(infile, "r");
-    if (inptr == NULL)
-    {
-        printf("Could not open %s.\n", infile);
+        printf("Usage: requires float ranging 1.0 to 100.0\n");
         return 2;
     }
     
-    // open output file
-    FILE* outptr = fopen(outfile, "w");
-    if (outptr == NULL)
+    // init the originating bmp file object
+    int result = initOrigBmpObject(argv[2]);
+    if (result != 0)
     {
-        fclose(inptr);
-        fprintf(stderr, "Could not create %s.\n", outfile);
-        return 3;
+        return 3; // Maybe do something nicer here?
     }
     
-    // read infile's BITMAPFILEHEADER
-    BITMAPFILEHEADER bf;
-    fread(&bf, sizeof(BITMAPFILEHEADER), 1, inptr);
-    
-    // read infile's BITMAPINFOHEADER
-    BITMAPINFOHEADER bi;
-    fread(&bi, sizeof(BITMAPINFOHEADER), 1, inptr);
-    
-    
-    // break here!
-    int newWidth = floor(bi.biWidth * factor);
-    int newHeight = floor(bi.biHeight * factor);
-    newHeight += 1;
-    int roundedFactor = round(factor);
-    
-    printf("newWidth=%i\n", newWidth);
-    printf("newHeight=%i\n", newHeight);
-    printf("roundedFactor=%i\n", roundedFactor);
-    
-    
-    // ensure infile is (likely) a 24-bit uncompressed BMP 4.0
-    if (bf.bfType != 0x4d42 || bf.bfOffBits != 54 || bi.biSize != 40 ||
-        bi.biBitCount != 24 || bi.biCompression != 0)
-    {
-        fclose(outptr);
-        fclose(inptr);
-        fprintf(stderr, "Unsupported file format.\n");
-        return 4;
-    }
-    
-    // update BITMAPFILEHEADER for outfile
-    int newBfSize = (newWidth * abs(newHeight));
-    newBfSize *= 3; // 24 bits/pixel = 3 bytes/pixel
-    newBfSize += bf.bfOffBits; // add in the size of the meta data
-    bf.bfSize = newBfSize;
-    printf("bf.bfSize=%i\n", bf.bfSize);
-    
-    // write outfile's BITMAPFILEHEADER
-    fwrite(&bf, sizeof(BITMAPFILEHEADER), 1, outptr);
-    
-    // remember the old dimensions
-    int oldWidth = bi.biWidth;
-    int oldHeight = bi.biHeight;
-    
-    // update BITMAPINFOHEADER for outfile
-    bi.biWidth = newWidth;
-    bi.biHeight = newHeight;
-    
-    // write outfile's BITMAPINFOHEADER
-    fwrite(&bi, sizeof(BITMAPINFOHEADER), 1, outptr);
-    
-    
-    // determine padding for scanlines
-    int inpadding =  (4 - (oldWidth * sizeof(RGBTRIPLE)) % 4) % 4;
-    int outpadding = 4 - (bi.biWidth % 4);
-    
-    
-    // iterate over infile's scanlines
-    //for (int i = 0, biHeight = abs(bi.biHeight); i < biHeight; i++)
-    for (int i = 0, biHeight = abs(oldHeight); i < biHeight; i++)
-    {
-        
-        for (int n = 0; n < roundedFactor; n ++)
-        {
-            // iterate over pixels in scanline
-            for (int j = 0; j < oldWidth; j++)
-            {
+    printf("check inObject for values\n");
 
-                printf("i=%i, n=%i, j=%i\n", i, n, j);
-                // temporary storage
-                RGBTRIPLE triple;
-                
-                // read RGB triple from infile
-                fread(&triple, sizeof(RGBTRIPLE), 1, inptr);
-                
-                // write RGB triple to outfile
-                fwrite(&triple, sizeof(RGBTRIPLE), 1, outptr);
-                
-                
-                // "replicate" pixels some 'factor' times
-                for (int f = roundedFactor - 1; f > 0; f--)
-                {
-                    fwrite(&triple, sizeof(RGBTRIPLE), 1, outptr);
-                }
-                
-            }
-            
-            // at the end of my scanline...
-            int rewind = (3 * oldWidth);
-            if (n == (roundedFactor - 1))
-            {
-                // do not rewind
-                // but add in any padding that may exist
-                fseek(inptr, inpadding, SEEK_CUR);
-            } else if (n < (roundedFactor - 1))
-            {
-                // rewind scanline
-                fseek(inptr, -rewind, SEEK_CUR);
-            }
-            
-            
-            // then add it back (to demonstrate how)
-            for (int k = 0; k < outpadding; k++)
-            {
-                fputc(0x00, outptr);
-            }
-
-            
-        }
-
-    }
     
-    // close infile
-    fclose(inptr);
     
-    // close outfile
-    fclose(outptr);
     
-    // that's all folks
+    
+    printf("hello world!\n");
+    
     return 0;
+}
+
+// ensures the input is within 1.0 to 100.0 range
+bool inputIsAcceptible(double d)
+{
+    bool isAcceptible = false;
+    int a = (int) (d * 100);
+    
+    if (a >= (BASE * 1) && a <= (BASE * BASE))
+    {
+        isAcceptible = true;
+    }
+    
+    return isAcceptible;
+}
+
+int initOrigBmpObject(char* incomingFile)
+{
+    printf("initOrigBmpObject\n");
+    
+    FILE* inFile = fopen(incomingFile, "r");
+    if (inFile == NULL)
+    {
+        printf("Could not open initial bmp file.\n");
+        return 3;
+    } else
+    {
+        fseek(inFile, 0, 0);
+    }
+    
+    BITMAPFILEHEADER inBFH;
+    fread(&inBFH, 1, sizeof(BITMAPFILEHEADER), inFile);
+    inObject.bmpFileHeader = inBFH;
+    
+    BITMAPINFOHEADER inBIH;
+    fread(&inBIH, 1, sizeof(BITMAPINFOHEADER), inFile);
+    inObject.bmpInfoHeader = inBIH;
+    
+    inObject.filename = incomingFile;
+    inObject.scaleBy = 0.0;
+    inObject.scaleFactor = -1;
+    
+    return 0;
+}
+
+void readWriteHeaders(bmpObject readObject, bmpObject writeObject)
+{
+    
 }
