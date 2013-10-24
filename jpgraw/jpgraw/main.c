@@ -29,18 +29,21 @@ typedef struct
 FourByteBlock;
 
 
+FourByteBlock formatFourByteBlock(BYTE* buffer);
+void extractJpgFile(char* jpgFilename, long streamIndex, FILE* readFile);
 char* getJpgFilename(int jpgNum);
 bool jpgSignatureMatch(FourByteBlock block);
+void printByteBlock(FourByteBlock block);
+
+
+FILE* file;
+long lSize;
 
 
 int main(void)
 {
-    FILE *file;
-    long lSize;
-    BYTE* buffer;
-    BYTE* smallBuffer;
-    size_t readResult;
-    size_t writeResult;
+    //size_t readResult;
+    //size_t writeResult;
     
     // attempt to open the file for reading
     file = fopen("card.raw", "r");
@@ -53,117 +56,125 @@ int main(void)
     
     // obtain file size:
     fseek (file , 0 , SEEK_END);
-    lSize = ftell (file);
+    lSize = ftell(file);
     rewind(file);
     
     printf("file size is %ld\n", lSize);
     
-    // allocate memory to contain 512 Bytes (a block)
-    buffer = (BYTE*) malloc (sizeof(BYTE) * 512);
-    if (buffer == NULL)
-    {
-        printf("Could not allocate a buffer.\n");
-        return 2;
-    }
+    // create a way to store where in the file we are
+    long streamMarker;
     
-    readResult = fread (buffer, 1, 512, file);
-    if (readResult != 512) {
-        printf("Error reading file.\n");
-        return 3;
-    }
+    // create a way to hold 4 bytes at a time to make
+    // jpg signature matching easier
+    BYTE* buffer;
+    buffer = (BYTE*) malloc(sizeof(BYTE) * 4);
     
-    int jpgSequenceNum = 0;
+    // let's count the jpgs we're exporting
+    int jpgFileCount = 0;
     
-    long bytesRead = 0;
-    
-    // setup a pointer that will point to the jpg file
-    FILE* jpgFilePtr;
-    
+    // DO EPIC STUFF HERE.
     while (!feof(file)) {
-        FourByteBlock b;
-        fread(&b, 1, sizeof(FourByteBlock), file);
+        streamMarker = ftell(file);
+        printf("streamMarker = %ld\n", streamMarker);
         
-        bytesRead += 4;
+        fread(buffer, 1, (sizeof(BYTE) * 4), file);
         
-        // loop through the bytes and search initial 4-byte blocks
-        // that might match the jpg signature(s)
-        if (jpgSignatureMatch(b))
+        FourByteBlock byteBlock = formatFourByteBlock(buffer);
+        //printByteBlock(byteBlock);
+        
+        if (jpgSignatureMatch(byteBlock))
         {
-            printf("\t\t-> Found beginning of a jpg!\n");
+            char* newJpgFilename = getJpgFilename(jpgFileCount);
             
-            jpgSequenceNum++;
+            extractJpgFile(newJpgFilename, streamMarker, file);
             
+            jpgFileCount++;
             
-            // TODO: remove this
-            if (jpgSequenceNum == 25)
+            if (jpgFileCount == 49)
             {
-                printf("canot get anything beyond dizzz\n");
+                printf("almost done!\n");
             }
             
-            
-            
-            char* newFilename = getJpgFilename(jpgSequenceNum);
-            printf("\t\t-> New filename = %s\n", newFilename);
-            
-            jpgFilePtr = fopen(newFilename, "w");
-            
-            // free up what was essentially malloc'd
-            
-            
-            if (jpgFilePtr == NULL)
-            {
-                printf("Could not create %s for writing.\n", newFilename);
-                return 4;
-            }
-            
-            // write the initial jpg signature
-            fwrite(&b, 1, sizeof(FourByteBlock), jpgFilePtr);
-            
-            bool isMatch;
-            
-            smallBuffer = (BYTE*) malloc(sizeof(BYTE) * 4);
-            
-            
-            do {
-                //readResult = fread(buffer, 1, 512, file);
-                readResult = fread(smallBuffer, 1, 4, file);
-                
-                bytesRead += 4;
-                
-                // pull the first 4 bytes of the 512 block
-                b.byte1 = smallBuffer[0];//buffer[0];
-                b.byte2 = smallBuffer[1];//buffer[1];
-                b.byte3 = smallBuffer[2];//buffer[2];
-                b.byte4 = smallBuffer[3];//buffer[3];
-                
-                //printf("four bytes %x %x %x %x\n", b.byte1, b.byte2, b.byte3, b.byte4);
-                
-                isMatch = jpgSignatureMatch(b);
-                
-                if (!isMatch)
-                {
-                    writeResult = fwrite(smallBuffer, 1, 4, jpgFilePtr);
-                    
-                }
-
-            } while (!jpgSignatureMatch(b));
-            
-            printf("\t\t-> Closed %s file.\n", newFilename);
-            fclose(jpgFilePtr);
-            free(newFilename);
+            // rewind the stream by 4 bytes to loop back and capture
+            // the jpg signature
+            long streamSpot = ftell(file);
+            fseek(file, (streamSpot - 4), 0);
+            streamSpot = ftell(file);
         }
+        
     }
     
-    fclose(file);
-    free(buffer);
-    free(smallBuffer);
     
-    printf("file bytes = %ld\n", lSize);
-    printf("read bytes = %ld\n", bytesRead);
+    free(buffer);
+    fclose(file);
     
     return 0;
 }
 
+FourByteBlock formatFourByteBlock(BYTE* buffer)
+{
+    FourByteBlock b;
+    
+    b.byte1 = buffer[0];
+    b.byte2 = buffer[1];
+    b.byte3 = buffer[2];
+    b.byte4 = buffer[3];
+    
+    return b;
+}
+
+void extractJpgFile(char* jpgFilename, long streamIndex, FILE* readFile)
+{
+    printf("extractJpgFile!\n");
+    
+    FILE* jpgFile = fopen(jpgFilename, "w");
+    
+    if (jpgFile == NULL)
+    {
+        printf("Could not create file %s\n", jpgFilename);
+        return;
+    }
+    
+    BYTE* localBuffer;
+    localBuffer = (BYTE*) malloc(sizeof(BYTE) * 4);
+    
+    fseek(readFile, streamIndex, 0);
+    
+    //long blah = ftell(readFile); // ensure you are beginning from where you really thought you were
+    
+    // write the first jpg signature block
+    fread(localBuffer, 1, (sizeof(BYTE) * 4), readFile);
+    fwrite(localBuffer, 1, (sizeof(BYTE) * 4), jpgFile);
+    
+    FourByteBlock b;
+    long startIndex;
+    
+    // continue reading/writing the rest of the jpg bytes
+    // constraint being the end of the file
+    while (startIndex < lSize) {
+        startIndex = ftell(file);
+        fread(localBuffer, 1, (sizeof(BYTE) * 4), file);
+        b = formatFourByteBlock(localBuffer);
+        
+        if (!jpgSignatureMatch(b))
+        {
+            fwrite(localBuffer, 1, (sizeof(BYTE) * 4), jpgFile);
+        } else
+        {
+            printf("Found sig match while writing jpg file!\n");
+            printf("breaking on line 158!\n");
+            break;
+        }
+    }
+    
+    printf("Now outside of while true loop!\n");
+    fclose(jpgFile);
+    free(localBuffer);
+    
+    printf("hi\n");
+}
+
+// manufacture a jpg filename
 char* getJpgFilename(int jpgNum)
 {
     string jpgFilename = malloc(sizeof(char) * 7);
@@ -207,4 +218,10 @@ bool jpgSignatureMatch(FourByteBlock block)
     }
     
     return match;
+}
+
+// optional printing of the bytes in a FourByteBlock
+void printByteBlock(FourByteBlock block)
+{
+    printf("%x%x %x%x\n", block.byte1, block.byte2, block.byte3, block.byte4);
 }
