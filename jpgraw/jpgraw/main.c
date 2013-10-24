@@ -42,9 +42,6 @@ long lSize;
 
 int main(void)
 {
-    //size_t readResult;
-    //size_t writeResult;
-    
     // attempt to open the file for reading
     file = fopen("card.raw", "r");
     
@@ -58,8 +55,6 @@ int main(void)
     fseek (file , 0 , SEEK_END);
     lSize = ftell(file);
     rewind(file);
-    
-    printf("file size is %ld\n", lSize);
     
     // create a way to store where in the file we are
     long streamMarker;
@@ -102,6 +97,7 @@ int main(void)
     return 0;
 }
 
+// Takes 4 bytes and simply formats them into the FourByteBlock struct
 FourByteBlock formatFourByteBlock(BYTE* buffer)
 {
     FourByteBlock b;
@@ -115,9 +111,7 @@ FourByteBlock formatFourByteBlock(BYTE* buffer)
 }
 
 void extractJpgFile(char* jpgFilename, long streamIndex, FILE* readFile)
-{
-    printf("extractJpgFile!\n");
-    
+{    
     FILE* jpgFile = fopen(jpgFilename, "w");
     
     if (jpgFile == NULL)
