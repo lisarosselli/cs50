@@ -128,7 +128,7 @@ int initOrigBmpObject(char* incomingFile)
 }
 
 int initDestBmpObject(char* filename, double userScaleValue)
-{    
+{
     outObject.filename = filename;
     
     FILE* writeFile = fopen(outObject.filename, "w");
@@ -143,11 +143,13 @@ int initDestBmpObject(char* filename, double userScaleValue)
     outObject.bmpFileHeader = inObject.bmpFileHeader;
     outObject.bmpInfoHeader = inObject.bmpInfoHeader;
     
+    // calculate new width/height
     long estimatedWidth = outObject.bmpInfoHeader.biWidth * round(userScaleValue);
+    int a = (estimatedWidth % 4);
+    long paddedWidth = (a == 0) ? estimatedWidth : (estimatedWidth + (4 - a));
     long estimatedHeight = outObject.bmpInfoHeader.biHeight * round(userScaleValue);
     
-    // calculate new width/height
-    outObject.bmpInfoHeader.biWidth = (LONG) estimatedWidth;
+    outObject.bmpInfoHeader.biWidth = (LONG) paddedWidth;
     outObject.bmpInfoHeader.biHeight = (LONG) estimatedHeight;
     
     // determine file size

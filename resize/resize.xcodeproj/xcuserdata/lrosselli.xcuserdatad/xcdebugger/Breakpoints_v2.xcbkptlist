@@ -42,11 +42,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "resize/main.c"
-            timestampString = "404339199.250957"
+            timestampString = "404339943.009906"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "212"
-            endingLineNumber = "212"
+            startingLineNumber = "174"
+            endingLineNumber = "174"
             landmarkName = "initDestBmpObject()"
             landmarkType = "7">
          </BreakpointContent>
