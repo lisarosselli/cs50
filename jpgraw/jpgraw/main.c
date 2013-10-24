@@ -75,7 +75,6 @@ int main(void)
     // DO EPIC STUFF HERE.
     while (!feof(file)) {
         streamMarker = ftell(file);
-        printf("streamMarker = %ld\n", streamMarker);
         
         fread(buffer, 1, (sizeof(BYTE) * 4), file);
         
@@ -85,16 +84,9 @@ int main(void)
         if (jpgSignatureMatch(byteBlock))
         {
             char* newJpgFilename = getJpgFilename(jpgFileCount);
-            
             extractJpgFile(newJpgFilename, streamMarker, file);
-            
             jpgFileCount++;
-            
-            if (jpgFileCount == 49)
-            {
-                printf("almost done!\n");
-            }
-            
+
             // rewind the stream by 4 bytes to loop back and capture
             // the jpg signature
             long streamSpot = ftell(file);
@@ -103,7 +95,6 @@ int main(void)
         }
         
     }
-    
     
     free(buffer);
     fclose(file);
@@ -140,14 +131,12 @@ void extractJpgFile(char* jpgFilename, long streamIndex, FILE* readFile)
     
     fseek(readFile, streamIndex, 0);
     
-    //long blah = ftell(readFile); // ensure you are beginning from where you really thought you were
-    
     // write the first jpg signature block
     fread(localBuffer, 1, (sizeof(BYTE) * 4), readFile);
     fwrite(localBuffer, 1, (sizeof(BYTE) * 4), jpgFile);
     
     FourByteBlock b;
-    long startIndex;
+    long startIndex = -1;
     
     // continue reading/writing the rest of the jpg bytes
     // constraint being the end of the file
@@ -161,17 +150,14 @@ void extractJpgFile(char* jpgFilename, long streamIndex, FILE* readFile)
             fwrite(localBuffer, 1, (sizeof(BYTE) * 4), jpgFile);
         } else
         {
-            printf("Found sig match while writing jpg file!\n");
-            printf("breaking on line 158!\n");
+            // Uh oh, found a new jpg signature match
+            // break outta this!
             break;
         }
     }
     
-    printf("Now outside of while true loop!\n");
     fclose(jpgFile);
     free(localBuffer);
-    
-    printf("hi\n");
 }
 
 // manufacture a jpg filename
