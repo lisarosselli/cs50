@@ -27,6 +27,7 @@ typedef struct
     char* filename;
     double scaleBy;
     int scaleFactor;
+    int padding;
 } bmpObject;
 
 
@@ -62,11 +63,94 @@ int main(int argc, char* argv[])
         return 3; // Maybe do something nicer here?
     }
     
+    // init the destination bmp file
     int writeResult = initDestBmpObject(argv[3], userFloat);
-    
-    printf("check objects for values\n");
+    if (writeResult != 0)
+    {
+        return 4;
+    }
 
     
+    // Do EPIC SHit!
+    FILE* inFile = fopen(inObject.filename, "r");
+    FILE* outFile = fopen(outObject.filename, "w");
+    
+    if (inFile == NULL || outFile == NULL)
+    {
+        printf("Failed to open file.\n");
+        return 9;
+    }
+    
+    fseek(inFile, inObject.bmpFileHeader.bfOffBits, 0);
+    fseek(outFile, outObject.bmpFileHeader.bfOffBits, 0);
+    
+    
+    //BYTE* tripleBuffer = (BYTE*) malloc(sizeof(RGBTRIPLE));
+    RGBTRIPLE tripleBuffer;
+    RGBTRIPLE* rowBuffer = (RGBTRIPLE*) malloc(sizeof(RGBTRIPLE) * (outObject.bmpInfoHeader.biWidth + outObject.padding));
+    // Something's hinky with my buffer! It's not holding things right!
+    
+    // setup a padding triple
+    RGBTRIPLE paddingTriple;
+    paddingTriple.rgbtBlue = '\0';
+    paddingTriple.rgbtGreen = '\0';
+    paddingTriple.rgbtRed = '\0';
+    
+    for (int origColumnIndex = 0; origColumnIndex < abs(inObject.bmpInfoHeader.biHeight); origColumnIndex++) {
+        // for each row as a whole
+        printf("origColumnIndex = %i\n", origColumnIndex);
+        
+        for (int origRowIndex = 0; origRowIndex < inObject.bmpInfoHeader.biWidth; origRowIndex++)
+        {
+            // for each pixel in a row
+            printf("\torigRowIndex = %i\n", origRowIndex);
+            fread(&tripleBuffer, 1, sizeof(RGBTRIPLE), inFile); // read triple
+
+            
+            for (int scaleFactorCount = 0; scaleFactorCount < outObject.scaleFactor; scaleFactorCount++) {
+                // for what WILL BE each pixel in the new, larger row
+                printf("\t\tscaleFactorCount = %i\n", scaleFactorCount);
+                
+                //write triple n times here, into rowBuffer
+                rowBuffer[scaleFactorCount] = tripleBuffer;
+            }
+            
+            
+        }
+        
+        // seek past any padding that may exist in the original file
+        if (inObject.padding > 0)
+        {
+            long streamSpot = ftell(inFile);
+            long paddingOffset = inObject.padding * sizeof(RGBTRIPLE);
+            fseek(inFile, (paddingOffset + streamSpot), 0);
+            streamSpot = ftell(inFile);
+        }
+        
+        // add any padding to our rowBuffer, consistent with the new dimensions
+        if (outObject.padding > 0)
+        {
+            for (int paddingCount = 0; paddingCount < outObject.padding; paddingCount++) {
+                printf("\tpadding = %i\n", paddingCount);
+                int b = outObject.bmpInfoHeader.biWidth + paddingCount;
+                rowBuffer[b] = paddingTriple;
+            }
+        }
+        
+        for (int replicatedRow = 0; replicatedRow < outObject.scaleFactor; replicatedRow++) {
+            printf("\treplicatedRow = %i\n", replicatedRow);
+            
+            // write rowBuffer (the entire row) n times into file
+            fwrite(rowBuffer, 1, sizeof(sizeof(RGBTRIPLE) * (inObject.bmpInfoHeader.biWidth + inObject.padding)), outFile);
+            
+        }
+        
+    }
+    
+    
+    //free(rowBuffer);
+    fclose(inFile);
+    fclose(outFile);
     
     
     
@@ -118,15 +202,20 @@ int initOrigBmpObject(char* incomingFile)
     inObject.bmpFileHeader = inBFH;
     inObject.bmpInfoHeader = inBIH;
     
+    int a = (inObject.bmpInfoHeader.biWidth % 4);
+    int padding = (a == 0) ? a : (4 - a);
+    
     inObject.filename = incomingFile;
     inObject.scaleBy = 0.0;
     inObject.scaleFactor = -1;
+    inObject.padding = padding;
     
     fclose(inFile);
     
     return 0;
 }
 
+// initialize the destination bmp file and object
 int initDestBmpObject(char* filename, double userScaleValue)
 {
     outObject.filename = filename;
@@ -144,22 +233,22 @@ int initDestBmpObject(char* filename, double userScaleValue)
     outObject.bmpInfoHeader = inObject.bmpInfoHeader;
     
     // calculate new width/height
-    long estimatedWidth = outObject.bmpInfoHeader.biWidth * round(userScaleValue);
+    long estimatedWidth = outObject.bmpInfoHeader.biWidth * userScaleValue;
     int a = (estimatedWidth % 4);
-    long paddedWidth = (a == 0) ? estimatedWidth : (estimatedWidth + (4 - a));
-    long estimatedHeight = outObject.bmpInfoHeader.biHeight * round(userScaleValue);
+    int padding = (a == 0) ? 0 : (4 - a);
+    long estimatedHeight = outObject.bmpInfoHeader.biHeight * userScaleValue;
+    outObject.padding = padding;
     
-    outObject.bmpInfoHeader.biWidth = (LONG) paddedWidth;
+    outObject.bmpInfoHeader.biWidth = (LONG) estimatedWidth;
     outObject.bmpInfoHeader.biHeight = (LONG) estimatedHeight;
     
     // determine file size
-    int rawBmpSize = outObject.bmpInfoHeader.biWidth * abs(outObject.bmpInfoHeader.biHeight) * sizeof(RGBTRIPLE);
+    int rawBmpSize = (outObject.bmpInfoHeader.biWidth + outObject.padding) * abs(outObject.bmpInfoHeader.biHeight) * sizeof(RGBTRIPLE);
     outObject.bmpInfoHeader.biSizeImage = rawBmpSize;
     outObject.bmpFileHeader.bfSize = rawBmpSize + outObject.bmpFileHeader.bfOffBits;
     
     // determine scale values
-    int proposedScaleFactor = outObject.bmpInfoHeader.biWidth % inObject.bmpInfoHeader.biWidth;
-    outObject.scaleFactor = (proposedScaleFactor == 0) ? round(userScaleValue) : proposedScaleFactor;
+    outObject.scaleFactor = round(userScaleValue);
     outObject.scaleBy = userScaleValue;
     
     // write header and info to the new file
