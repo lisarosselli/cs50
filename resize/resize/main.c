@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
     
     // Do EPIC SHit!
     FILE* inFile = fopen(inObject.filename, "r");
-    FILE* outFile = fopen(outObject.filename, "w");
+    FILE* outFile = fopen(outObject.filename, "a");
     
     if (inFile == NULL || outFile == NULL)
     {
@@ -85,9 +85,9 @@ int main(int argc, char* argv[])
     fseek(outFile, outObject.bmpFileHeader.bfOffBits, 0);
     
     
-    //BYTE* tripleBuffer = (BYTE*) malloc(sizeof(RGBTRIPLE));
     RGBTRIPLE tripleBuffer;
-    RGBTRIPLE* rowBuffer = (RGBTRIPLE*) malloc(sizeof(RGBTRIPLE) * (outObject.bmpInfoHeader.biWidth + outObject.padding));
+    int testSize = sizeof(RGBTRIPLE) * (outObject.bmpInfoHeader.biWidth + outObject.padding); // this is correct
+    RGBTRIPLE* rowBuffer = (RGBTRIPLE*) malloc(testSize);
     // Something's hinky with my buffer! It's not holding things right!
     
     // setup a padding triple
@@ -96,9 +96,11 @@ int main(int argc, char* argv[])
     paddingTriple.rgbtGreen = '\0';
     paddingTriple.rgbtRed = '\0';
     
-    for (int origColumnIndex = 0; origColumnIndex < abs(inObject.bmpInfoHeader.biHeight); origColumnIndex++) {
+    //RGBTRIPLE* rowBufferLocationPointer = rowBuffer;
+    
+    for (int row = 0; row < abs(inObject.bmpInfoHeader.biHeight); row++) {
         // for each row as a whole
-        printf("origColumnIndex = %i\n", origColumnIndex);
+        printf("row = %i\n", row);
         
         for (int origRowIndex = 0; origRowIndex < inObject.bmpInfoHeader.biWidth; origRowIndex++)
         {
@@ -112,10 +114,13 @@ int main(int argc, char* argv[])
                 printf("\t\tscaleFactorCount = %i\n", scaleFactorCount);
                 
                 //write triple n times here, into rowBuffer
-                rowBuffer[scaleFactorCount] = tripleBuffer;
+                //rowBuffer[scaleFactorCount] = tripleBuffer;
+                
+                // this is better
+                int blah = origRowIndex * outObject.scaleFactor;
+                RGBTRIPLE* rowBufferNextAddress = rowBuffer + blah; //rowBuffer + scaleFactorCount;
+                *rowBufferNextAddress = tripleBuffer;
             }
-            
-            
         }
         
         // seek past any padding that may exist in the original file
@@ -133,7 +138,9 @@ int main(int argc, char* argv[])
             for (int paddingCount = 0; paddingCount < outObject.padding; paddingCount++) {
                 printf("\tpadding = %i\n", paddingCount);
                 int b = outObject.bmpInfoHeader.biWidth + paddingCount;
-                rowBuffer[b] = paddingTriple;
+                //rowBuffer[b] = paddingTriple;
+                RGBTRIPLE* rowBufferNextAddress = rowBuffer + b;
+                *rowBufferNextAddress = paddingTriple;
             }
         }
         
@@ -141,20 +148,17 @@ int main(int argc, char* argv[])
             printf("\treplicatedRow = %i\n", replicatedRow);
             
             // write rowBuffer (the entire row) n times into file
-            fwrite(rowBuffer, 1, sizeof(sizeof(RGBTRIPLE) * (inObject.bmpInfoHeader.biWidth + inObject.padding)), outFile);
-            
+            // this is not right. but i do want to write the entire chunk in rowBuffer (rowBuffer+1, rowBuffer+2)
+            int size = sizeof(RGBTRIPLE) * (outObject.bmpInfoHeader.biWidth + outObject.padding);
+            fwrite(rowBuffer, 1, size, outFile);
         }
         
     }
     
     
-    //free(rowBuffer);
+    free(rowBuffer);
     fclose(inFile);
     fclose(outFile);
-    
-    
-    
-    printf("hello world!\n");
     
     return 0;
 }
