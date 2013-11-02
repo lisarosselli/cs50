@@ -1,0 +1,22 @@
+
+http://shuttleboy.cs50.net/api/1.2/stops?output=json
+
+[
+	{"stop":"114 Western Ave","lat":null,"lng":null},
+	{"stop":"Boylston Gate","lat":"42.373078","lng":"-71.117578"},
+	{"stop":"Harvard Square","lat":"42.373226","lng":"-71.119527"},
+	{"stop":"HBS Rotary","lat":"42.365290","lng":"-71.122905"},
+	{"stop":"HKS","lat":"42.371515","lng":"-71.120910"},
+	{"stop":"i-Lab","lat":"42.364618","lng":"-71.123360"},
+	{"stop":"Lamont Library","lat":"42.372862","lng":"-71.115046"},
+	{"stop":"Mass Ave Garden St","lat":"42.375186","lng":"-71.119394"},
+	{"stop":"Mather House","lat":"42.368719","lng":"-71.115170"},
+	{"stop":"Maxwell Dworkin","lat":"42.378795","lng":"-71.116738"},
+	{"stop":"Memorial Hall","lat":"42.376273","lng":"-71.114441"},
+	{"stop":"Peabody Terrace","lat":"42.367034","lng":"-71.114936"},
+	{"stop":"Pound Hall","lat":"42.378184","lng":"-71.119992"},
+	{"stop":"Quad","lat":"42.381820","lng":"-71.125369"},
+	{"stop":"Soldiers Field Park","lat":"42.364965","lng":"-71.120287"},
+	{"stop":"Stadium","lat":"42.367007","lng":"-71.124832"},
+	{"stop":"Winthrop House","lat":"42.370570","lng":"-71.119220"}
+]
