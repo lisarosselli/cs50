@@ -37,6 +37,8 @@
 		A3594848182481EF00060ABE /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3594847182481EF00060ABE /* SystemConfiguration.framework */; };
 		A359484B1825A2EB00060ABE /* GoogleMaps.bundle in Resources */ = {isa = PBXBuildFile; fileRef = A359484A1825A2EB00060ABE /* GoogleMaps.bundle */; };
 		A359484C1825A2EB00060ABE /* GoogleMaps.bundle in Resources */ = {isa = PBXBuildFile; fileRef = A359484A1825A2EB00060ABE /* GoogleMaps.bundle */; };
+		A35948501825B6A700060ABE /* SBStop.m in Sources */ = {isa = PBXBuildFile; fileRef = A359484F1825B6A700060ABE /* SBStop.m */; };
+		A35948511825B6A700060ABE /* SBStop.m in Sources */ = {isa = PBXBuildFile; fileRef = A359484F1825B6A700060ABE /* SBStop.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -83,6 +85,8 @@
 		A3594845182481E800060ABE /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		A3594847182481EF00060ABE /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
 		A359484A1825A2EB00060ABE /* GoogleMaps.bundle */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.plug-in"; name = GoogleMaps.bundle; path = GoogleMaps.framework/Versions/A/Resources/GoogleMaps.bundle; sourceTree = "<group>"; };
+		A359484E1825B6A700060ABE /* SBStop.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SBStop.h; sourceTree = "<group>"; };
+		A359484F1825B6A700060ABE /* SBStop.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SBStop.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -170,6 +174,7 @@
 		A35947FF1824671D00060ABE /* shuttleboy */ = {
 			isa = PBXGroup;
 			children = (
+				A359484D1825B65900060ABE /* data */,
 				A35948081824671D00060ABE /* AppDelegate.h */,
 				A35948091824671D00060ABE /* AppDelegate.m */,
 				A359480B1824671D00060ABE /* Main.storyboard */,
@@ -208,6 +213,15 @@
 				A35948211824671D00060ABE /* InfoPlist.strings */,
 			);
 			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		A359484D1825B65900060ABE /* data */ = {
+			isa = PBXGroup;
+			children = (
+				A359484E1825B6A700060ABE /* SBStop.h */,
+				A359484F1825B6A700060ABE /* SBStop.m */,
+			);
+			name = data;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -311,6 +325,7 @@
 			files = (
 				A35948101824671D00060ABE /* ViewController.m in Sources */,
 				A359480A1824671D00060ABE /* AppDelegate.m in Sources */,
+				A35948501825B6A700060ABE /* SBStop.m in Sources */,
 				A35948061824671D00060ABE /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -319,6 +334,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A35948511825B6A700060ABE /* SBStop.m in Sources */,
 				A35948251824671D00060ABE /* shuttleboyTests.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
